@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/estudioCohorteCSSFVModelo"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/postgresql-9.2-1002.jdbc3.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/wsDataClientOpenClinica"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/wsEventClientOpenClinica"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/log4j-1.2.14.jar"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/commons-configuration-1.5.jar"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/axis.jar"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/javax.wsdl_1.6.2.v201012040545.jar"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/jaxrpc.jar"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/commons-lang-2.4.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Componentes/Libs/hibernate-core-4.2.1.Final.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

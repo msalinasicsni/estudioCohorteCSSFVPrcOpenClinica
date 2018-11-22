@@ -1,0 +1,29 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v1="http://openclinica.org/ws/event/v1" xmlns:bean="http://openclinica.org/ws/beans">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <v1:scheduleRequest>
+         <!--1 or more repetitions:-->
+         <v1:event>
+            <bean:studySubjectRef>
+               <bean:label>${label}</bean:label>
+            </bean:studySubjectRef>
+            <bean:studyRef>
+               <bean:identifier>${identifier}</bean:identifier>			   
+               <!--Optional:-->
+               <bean:siteRef>
+				  <bean:identifier>${siteidentifier}</bean:identifier>
+               </bean:siteRef>
+            </bean:studyRef>
+            <bean:eventDefinitionOID>${eventDefinitionOID}</bean:eventDefinitionOID>
+            <bean:location>${location}</bean:location>
+            <bean:startDate>${startDate}</bean:startDate>
+            <!--Optional:-->
+            <bean:startTime>${startTime}</bean:startTime>
+            <!--Optional:-->
+            <bean:endDate>${endDate}</bean:endDate>
+            <!--Optional:-->
+            <bean:endTime>${endTime}</bean:endTime>
+         </v1:event>
+      </v1:scheduleRequest>
+   </soapenv:Body>
+</soapenv:Envelope>
