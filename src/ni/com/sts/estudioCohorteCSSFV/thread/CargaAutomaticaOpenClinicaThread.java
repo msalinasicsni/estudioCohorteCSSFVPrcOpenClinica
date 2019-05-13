@@ -140,7 +140,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 				}	
 			}catch(Exception ex){
 				logger.error("Ha ocurrido un error en la ejecución del hilo "+this.getName());
-				logger.error(StackTraceUtl.getStackTrace(ex));
+				logger.error(ex);
 			}finally{
 				logger.info(this.getName()+" - finalizado");
 			}
