@@ -53,7 +53,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
   "num_orden_laboratorio,  acetaminofen,  asa,  ibuprofen,  penicilina,  amoxicilina,  dicloxacilina,  otro_antibiotico,  furazolidona,  metronidazol_tinidazol,  albendazol_mebendazol, "+
   "sulfato_ferroso,  suero_oral,  sulfato_zinc,  liquidos_iv,  prednisona,  hidrocortisona_iv,  salbutamol,  oseltamivir,  diagnostico1,  diagnostico2,  diagnostico3, "+
   "diagnostico4,  otro_diagnostico,  proxima_cita,  am_pm_ult_dia_fiebre,  to_char(hora_ult_dosis_antipiretico, 'dd/MM/yyyy HH12:MI:SS'), "+
-  "am_pm_ult_dosis_antipiretico, fis,  fif,  hepatomegalia_cm,  eritrocitos, fecha_linfocitos, fecha_cierre, fecha_cierre_cambio_turno, usuario_medico, usuario_enfermeria, turno, " +
+  "am_pm_ult_dosis_antipiretico, fis,  fif,  hepatomegalia_cm,  eritrocitos, fecha_linfocitos, to_char(fecha_cierre, 'dd/MM/yyyy HH24:MI:SS'), fecha_cierre_cambio_turno, usuario_medico, usuario_enfermeria, turno, " +
   "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv, expediente_fisico, colegio " +
 					" from hoja_consulta "+
 							"where estado = ? "+
