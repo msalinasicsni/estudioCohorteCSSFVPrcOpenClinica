@@ -328,7 +328,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					if (rs.getDate(194)!=null)
 						dato.setFechaLinfocitos(rs.getDate(194));
 					if (rs.getDate(195)!=null)
-						dato.setFechaCierre(UtilDate.StringToDate(rs.getString(195),"dd/MM/yyyy hh:mm:ss"));
+						dato.setFechaCierre(UtilDate.StringToDate(rs.getString(195),"dd/MM/yyyy HH:mm:ss"));
 						//dato.setFechaCierre(rs.getDate(195));
 					if (rs.getDate(196)!=null)
 						dato.setFechaCierreCambioTurno(rs.getDate(196));
