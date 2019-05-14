@@ -54,7 +54,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
   "sulfato_ferroso,  suero_oral,  sulfato_zinc,  liquidos_iv,  prednisona,  hidrocortisona_iv,  salbutamol,  oseltamivir,  diagnostico1,  diagnostico2,  diagnostico3, "+
   "diagnostico4,  otro_diagnostico,  proxima_cita,  am_pm_ult_dia_fiebre,  to_char(hora_ult_dosis_antipiretico, 'dd/MM/yyyy HH12:MI:SS'), "+
   "am_pm_ult_dosis_antipiretico, fis,  fif,  hepatomegalia_cm,  eritrocitos, fecha_linfocitos, fecha_cierre, fecha_cierre_cambio_turno, usuario_medico, usuario_enfermeria, turno, " +
-  "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv " +
+  "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv, expediente_fisico, colegio " +
 					" from hoja_consulta "+
 							"where estado = ? "+
 							"and (estado_carga = ? or estado_carga is null) order by sec_hoja_consulta";
@@ -328,7 +328,8 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					if (rs.getDate(194)!=null)
 						dato.setFechaLinfocitos(rs.getDate(194));
 					if (rs.getDate(195)!=null)
-						dato.setFechaCierre(rs.getDate(195));
+						dato.setFechaCierre(UtilDate.StringToDate(rs.getString(195),"dd/MM/yyyy hh:mm:ss"));
+						//dato.setFechaCierre(rs.getDate(195));
 					if (rs.getDate(196)!=null)
 						dato.setFechaCierreCambioTurno(rs.getDate(196));
 					dato.setUsuarioMedico(rs.getShort(197));
@@ -351,6 +352,10 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 						dato.setHora(rs.getString(208));
 					if (rs.getString(209)!=null)
 						dato.setHorasv(rs.getString(209));
+					if (rs.getString(210) != null)
+						dato.setExpedienteFisico(rs.getString(210));
+					if (rs.getString(211) !=null)
+						dato.setColegio(rs.getString(211));
 				
 				resultado.add(dato);
 			}
