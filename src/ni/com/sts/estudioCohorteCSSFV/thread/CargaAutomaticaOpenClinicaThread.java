@@ -17,7 +17,11 @@ import ni.com.sts.estudioCohorteCSSFV.datos.PacienteDA;
 import ni.com.sts.estudioCohorteCSSFV.datos.ParametrosDA;
 import ni.com.sts.estudioCohorteCSSFV.modelo.HistEjecucionProcesoAutomatico;
 import ni.com.sts.estudioCohorteCSSFV.modelo.HojaConsulta;
+import ni.com.sts.estudioCohorteCSSFV.modelo.HojaInfluenza;
+import ni.com.sts.estudioCohorteCSSFV.modelo.HojaZika;
 import ni.com.sts.estudioCohorteCSSFV.modelo.Paciente;
+import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoInfluenza;
+import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoZika;
 import ni.com.sts.estudioCohorteCSSFV.openClinica.EventScheduleParams;
 import ni.com.sts.estudioCohorteCSSFV.openClinica.ServiciosOpenClinica;
 import ni.com.sts.estudioCohorteCSSFV.servicios.HistEjecucionProcesoService;
@@ -39,7 +43,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 	private PacienteService pacienteService = new PacienteDA();
 	
 	@SuppressWarnings("static-access")
-	public void run(){
+	public void run() {
 		while(true){
 			try{
 				config = UtilProperty.getConfigurationfromExternalFile("estudioCohorteCSSFVOPC.properties");
@@ -68,9 +72,14 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 						Date dFechaEjecucion = UtilDate.StringToDate(sFechaHoy+" "+valor, "dd/MM/yyyy HH:mm");
 						System.out.println(dFechaEjecucion.compareTo(dFechaHoy));
 						if (dFechaEjecucion.compareTo(dFechaHoy) < 0){
+							
 							List<HojaConsulta> hojasPendientesCarga = hojaConsultaService.getHojasConsultaPendientesCarga();
+							List<HojaInfluenza> hojasInfluenzaPendientesCarga = hojaConsultaService.getHojasInfluenzaPendientesCarga();
+							List<HojaZika> hojasZikaPendientesCarga = hojaConsultaService.getHojasZikaPendientesCarga();
+							
 							logger.debug("hojasPendientesCarga.size() :: "+hojasPendientesCarga.size());
 							System.out.println("hojasPendientesCarga.size() :: "+hojasPendientesCarga.size());
+							
 							if (hojasPendientesCarga.size()>0){
 								EventScheduleParams eventParams;
 								InfoResultado registroProceso = histEjecucionProcesoService.registrarEjecucionProceso("OPENCLINICA");
@@ -115,22 +124,175 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 								}else{
 									logger.error(registroProceso.getMensaje());
 								}
-							}else{
+							}/*else{
 								logger.debug("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
 								System.out.println("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
 								this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
 								logger.debug("despierta main");
 								System.out.println("despierta main");
-							}					
+							}*/
 							
-						 }else{
+							//-----------------------------------Hoja Influenza------------------------------------------------
+							
+							logger.debug("hojasInfluenzaPendientesCarga.size() :: "+hojasInfluenzaPendientesCarga.size());
+							System.out.println("hojasInfluenzaPendientesCarga.size() :: "+hojasInfluenzaPendientesCarga.size());
+							
+							// verificamos si hay hojas de influneza pendientes para subir a openClinica
+							if (hojasInfluenzaPendientesCarga.size()>0) {
+								EventScheduleParams eventParams;
+								int sec=1;
+								ServiciosOpenClinica cliente = new ServiciosOpenClinica();
+								InfoResultado resultado = new InfoResultado();
+								for(HojaInfluenza hojaInfluenza:hojasInfluenzaPendientesCarga) {
+									
+									logger.debug("sec_hoja_influenza :: " +hojaInfluenza.getSecHojaInfluenza());
+									System.out.println("sec_hoja_influenza :: " +hojaInfluenza.getSecHojaInfluenza());
+									
+									List<SeguimientoInfluenza> seguimientoInfluenzas = hojaConsultaService.getSeguimientoInfluenzaBySec(hojaInfluenza.getSecHojaInfluenza());
+									
+									/* Verificamos si el repeat key de la hoja influenza sea igual a null
+									 * si se cumple la condicion se crea el crf completo*/
+									if (hojaInfluenza.getRepeatKey() == null) {
+										
+										//se consumen webservices
+										Paciente paciente = pacienteService.getPacienteById(hojaInfluenza.getCodExpediente());
+										eventParams = new EventScheduleParams();
+										eventParams.setLabel(String.valueOf(paciente.getCodExpediente())); //<label>9803</label>
+										eventParams.setEventDefinitionOID(config.getString("event.schedule.eventDefinitionOID.HI"));//<eventDefinitionOID>SE_CONSULTACS</eventDefinitionOID>
+										eventParams.setLocation(config.getString("event.schedule.location")); //<location>CS</location>
+										eventParams.setIdentifier(config.getString("event.schedule.identifier")); //<identifier>S_1</identifier>
+										eventParams.setSiteidentifier(config.getString("event.schedule.site.identifier")); //<identifier></identifier>
+										eventParams.setStartDate(hojaInfluenza.getFechaInicio()); //<startDate>2008-12-12</startDate> //<startTime>12:00</startTime>
+										if (hojaInfluenza.getFechaCierre()!=null) {
+											eventParams.setEndDate(hojaInfluenza.getFechaCierre()); //<endDate>2008-12-12</endDate> //<endTime>15:00</endTime>
+										} else {
+											eventParams.setEndDate(null);
+										}
+										
+										resultado = cliente.consumirEventCliente(eventParams);
+										if (resultado.isOk()) {
+											hojaInfluenza.setRepeatKey(resultado.getMensaje());
+											hojaConsultaService.updateHojaInfluenzaRepeatKey(hojaInfluenza);
+											resultado = cliente.consumirDataHojaInfluenza(hojaInfluenza, seguimientoInfluenzas, sec, resultado.getMensaje());
+											if (resultado.isOk()) {
+												hojaInfluenza.setEstadoCarga('1');
+												hojaConsultaService.updateHojaInfluenza(hojaInfluenza);
+												logger.debug("Hoja de influenza procesada: "+hojaInfluenza.getSecHojaInfluenza());	
+											} else {
+												logger.error(resultado.getMensaje());
+											}
+										} else{
+											logger.error(resultado.getMensaje());
+										}
+										sec ++;
+									} 
+									/* Si ya existe el repeat key en la hoja de influenza, nos indica que ya se a creado el crf entonces
+									 * solo procedemos a hacer un update para ese repeat key*/
+									else { 
+										//List<SeguimientoInfluenza> seguimientoInfluenzas = hojaConsultaService.getSeguimientoInfluenzaBySec(hojaInfluenza.getSecHojaInfluenza());
+										resultado = cliente.consumirDataHojaInfluenza(hojaInfluenza, seguimientoInfluenzas, sec, resultado.getMensaje());
+										if (resultado.isOk()) {
+											hojaInfluenza.setEstadoCarga('1');
+											hojaConsultaService.updateHojaInfluenza(hojaInfluenza);
+											logger.debug("Hoja de influenza procesada: "+hojaInfluenza.getSecHojaInfluenza());	
+										} else {
+											logger.error(resultado.getMensaje());
+										}
+										sec ++;
+									}
+								}
+							}
+							
+							//-----------------------------------Hoja Zika----------------------------------------------------
+							
+							logger.debug("hojasZikaPendientesCarga.size() :: "+hojasZikaPendientesCarga.size());
+							System.out.println("hojasZikaPendientesCarga.size() :: "+hojasZikaPendientesCarga.size());
+							
+							// verificamos si hay hojas de zika pendientes para subir a openClinica
+							if (hojasZikaPendientesCarga.size()>0) {
+								EventScheduleParams eventParams;
+								int sec=1;
+								ServiciosOpenClinica cliente = new ServiciosOpenClinica();
+								InfoResultado resultado = new InfoResultado();
+								for(HojaZika hojaZika:hojasZikaPendientesCarga) {
+									
+									logger.debug("sec_hoja_zika :: " +hojaZika.getSecHojaZika());
+									System.out.println("sec_hoja_zika :: " +hojaZika.getSecHojaZika());
+									
+									List<SeguimientoZika> seguimientoZika = hojaConsultaService.getSeguimientoZikaBySec(hojaZika.getSecHojaZika());
+									
+									/* Verificamos si el repeat key de la hoja zika sea igual a null
+									 * si se cumple la condicion se crea el crf completo*/
+									if ( hojaZika.getRepeatKey() == null) {
+										
+										//se consumen webservices
+										Paciente paciente = pacienteService.getPacienteById(hojaZika.getCodExpediente());
+										eventParams = new EventScheduleParams();
+										eventParams.setLabel(String.valueOf(paciente.getCodExpediente())); //<label>9803</label>
+										eventParams.setEventDefinitionOID(config.getString("event.schedule.eventDefinitionOID.ZK"));//<eventDefinitionOID>SE_CONSULTACS</eventDefinitionOID>
+										eventParams.setLocation(config.getString("event.schedule.location")); //<location>CS</location>
+										eventParams.setIdentifier(config.getString("event.schedule.identifier")); //<identifier>S_1</identifier>
+										eventParams.setSiteidentifier(config.getString("event.schedule.site.identifier")); //<identifier></identifier>
+										eventParams.setStartDate(hojaZika.getFechaInicio()); //<startDate>2008-12-12</startDate> //<startTime>12:00</startTime>
+										if (hojaZika.getFechaCierre()!=null) {
+											eventParams.setEndDate(hojaZika.getFechaCierre()); //<endDate>2008-12-12</endDate> //<endTime>15:00</endTime>
+										} else {
+											eventParams.setEndDate(null);
+										}
+										
+										resultado = cliente.consumirEventCliente(eventParams);
+										
+										if (resultado.isOk()) {
+											hojaZika.setRepeatKey(resultado.getMensaje());
+											hojaConsultaService.updateHojaZikaRepeatKey(hojaZika);
+											resultado = cliente.consumirDataHojaZika(hojaZika, seguimientoZika, sec, resultado.getMensaje());
+											if (resultado.isOk()) {
+												hojaZika.setEstadoCarga('1');
+												hojaConsultaService.updateHojaZika(hojaZika);
+												logger.debug("Hoja de zika procesada: "+hojaZika.getSecHojaZika());	
+											} else {
+												logger.error(resultado.getMensaje());
+											}
+										} else {
+											logger.error(resultado.getMensaje());
+										}
+										sec ++;
+									}
+									/* Si ya existe el repeat key en la hoja de influenza, nos indica que ya se a creado el crf entonces
+									 * solo procedemos a hacer un update para ese repeat key*/
+									else {
+										//List<SeguimientoZika> seguimientoZika = hojaConsultaService.getSeguimientoZikaBySec(hojaZika.getSecHojaZika());
+										resultado = cliente.consumirDataHojaZika(hojaZika, seguimientoZika, sec, resultado.getMensaje());
+										if (resultado.isOk()) {
+											hojaZika.setEstadoCarga('1');
+											hojaConsultaService.updateHojaZika(hojaZika);
+											logger.debug("Hoja de zika procesada: "+hojaZika.getSecHojaZika());	
+										} else {
+											logger.error(resultado.getMensaje());
+										}
+										sec ++;
+									}
+								}
+							}
+							//------------------------------------------------------------------------------------------------
+							if (hojasPendientesCarga.size() <= 0 && hojasInfluenzaPendientesCarga.size() <= 0 
+									&& hojasZikaPendientesCarga.size() <= 0) {
+								logger.debug("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
+								System.out.println("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
+								this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
+								logger.debug("despierta main");
+								System.out.println("despierta main");
+							}
+							/*-------------------------------------------------------------------------------------------------*/
+							
+						 } else {
 							logger.debug("Se duerme main 5 min");
 							System.out.println("Se duerme main 5 min");
 							this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
 							logger.debug("despierta main");
 							System.out.println("despierta main");
 						} 
-					}else{
+					} else {
 						logger.debug("Se duerme main 5 min. No se encontró valor de parámetro HORA_EJECUCION_CAOC");
 						System.out.println("Se duerme main 5 min. No se encontró valor de parámetro HORA_EJECUCION_CAOC");
 						this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos

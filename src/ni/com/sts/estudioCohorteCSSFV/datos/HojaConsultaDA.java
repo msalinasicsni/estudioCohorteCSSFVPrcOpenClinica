@@ -11,6 +11,10 @@ import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.log4j.Logger;
 
 import ni.com.sts.estudioCohorteCSSFV.modelo.HojaConsulta;
+import ni.com.sts.estudioCohorteCSSFV.modelo.HojaInfluenza;
+import ni.com.sts.estudioCohorteCSSFV.modelo.HojaZika;
+import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoInfluenza;
+import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoZika;
 import ni.com.sts.estudioCohorteCSSFV.servicios.HojaConsultaService;
 import ni.com.sts.estudioCohorteCSSFV.util.ConnectionDAO;
 import ni.com.sts.estudioCohorteCSSFV.util.UtilDate;
@@ -28,7 +32,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 		config = UtilProperty.getConfigurationfromExternalFile("estudioCohorteCSSFVOPC.properties");
 		UtilLog.setLog(config.getString("estudioCohorteCSSFVOPC.log"));
 	}
-	
+		
 	@Override
 	public List<HojaConsulta> getHojasConsultaPendientesCarga() throws Exception {
 		conn = getConection();
@@ -402,6 +406,402 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
                     conn.close();
                 }
 
+            } catch (SQLException ex) {
+    			logger.error(" No se pudo cerrar conexión ", ex);
+            }
+        }
+	}
+	
+	@Override
+	public List<HojaInfluenza> getHojasInfluenzaPendientesCarga() throws Exception {
+		conn = getConection();
+		List<HojaInfluenza> resultado = new ArrayList<HojaInfluenza>();
+		ResultSet rs = null;
+		try {
+			String query = "select sec_hoja_influenza, cod_expediente, num_hoja_seguimiento, fif, "
+					+ " fis, to_char(fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "
+					+ " repeat_key "
+					+ " from hoja_influenza "
+					+ " where cerrado = ? "
+					+ " and (estado_carga = ? or estado_carga is null) order by sec_hoja_influenza ";
+			
+			pstm = conn.prepareStatement(query);
+			pstm.setString(1, "S"); //hoja_influenza.cerrado = "S"
+			pstm.setString(2, "0"); //hoja_influenza.estado_carga = Pendiente
+			rs = pstm.executeQuery();
+			
+			while (rs.next()) {
+				HojaInfluenza hojaInfluenza = new HojaInfluenza();
+				hojaInfluenza.setSecHojaInfluenza(rs.getInt(1));
+				hojaInfluenza.setCodExpediente(rs.getInt(2));
+				hojaInfluenza.setNumHojaSeguimiento(rs.getInt(3));
+				hojaInfluenza.setFif(rs.getString(4));
+				hojaInfluenza.setFis(rs.getString(5));
+				hojaInfluenza.setFechaInicio(UtilDate.StringToDate(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
+				hojaInfluenza.setFechaCierre(UtilDate.StringToDate(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
+				hojaInfluenza.setRepeatKey(rs.getString(8));
+				
+				resultado.add(hojaInfluenza);
+			}
+		} catch (Exception e) {
+				e.printStackTrace();
+				throw new Exception(e);
+		} finally {
+			try {
+	            if (rs != null) {
+	                rs.close();
+	            }
+	            if (pstm != null) {
+	                pstm.close();
+	            }
+	            if (conn != null) {
+	                conn.close();
+	            }
+
+	        } catch (SQLException ex) {
+				logger.error(" No se pudo cerrar conexión ", ex);
+	        }
+		}
+        return resultado;
+	}
+	
+	@Override
+	public List<SeguimientoInfluenza> getSeguimientoInfluenzaBySec(int secHojaInfluenza) throws Exception {
+		conn = getConection();
+		List<SeguimientoInfluenza> resultado = new ArrayList<SeguimientoInfluenza>();
+		ResultSet rs = null;
+		try {
+			String query = "select sec_seg_influenza, sec_hoja_influenza, to_char(fecha_seguimiento, 'dd-MM-yyyy'), usuario_medico, "
+					+ " consulta_inicial, fiebre, tos, secrecion_nasal, dolor_garganta, "/*9*/
+					+ " congestion_nasa, dolor_cabeza, falta_apetito, dolor_muscular, "/*13*/
+					+ " dolor_articular, dolor_oido, respiracion_rapida, dificultad_respirar, "/*17*/
+					+ " falta_escuela, quedo_en_cama, control_dia "
+					+ " from seguimiento_influenza "
+					+ " where sec_hoja_influenza = ? "
+					+ " order by control_dia asc ";
+			
+			pstm = conn.prepareStatement(query);
+			pstm.setInt(1, secHojaInfluenza); //seguimiento_influenza.sec_hoja_influenza
+			rs = pstm.executeQuery();
+			
+			while (rs.next()) { 
+				SeguimientoInfluenza seguimientoInfluenza = new SeguimientoInfluenza();
+				seguimientoInfluenza.setSecSegInfluenza(rs.getInt(1));
+				seguimientoInfluenza.setSecHojaInfluenza(rs.getInt(2));
+				seguimientoInfluenza.setFechaSeguimiento(UtilDate.StringToDate(rs.getString(3),"dd-MM-yyyy"));
+				seguimientoInfluenza.setUsuarioMedico(rs.getShort(4));
+				seguimientoInfluenza.setConsultaInicial(rs.getString(5));
+				seguimientoInfluenza.setFiebre(rs.getString(6));
+				seguimientoInfluenza.setTos(rs.getString(7));
+				seguimientoInfluenza.setSecrecionNasal(rs.getString(8));
+				seguimientoInfluenza.setDolorGarganta(rs.getString(9));
+				seguimientoInfluenza.setCongestionNasa(rs.getString(10));
+				seguimientoInfluenza.setDolorCabeza(rs.getString(11));
+				seguimientoInfluenza.setFaltaApetito(rs.getString(12));
+				seguimientoInfluenza.setDolorMuscular(rs.getString(13));
+				seguimientoInfluenza.setDolorArticular(rs.getString(14));
+				seguimientoInfluenza.setDolorOido(rs.getString(15));
+				seguimientoInfluenza.setRespiracionRapida(rs.getString(16));
+				seguimientoInfluenza.setDificultadRespirar(rs.getString(17));
+				seguimientoInfluenza.setFaltaEscuela(rs.getString(18));
+				seguimientoInfluenza.setQuedoEnCama(rs.getString(19));
+				seguimientoInfluenza.setControlDia(rs.getInt(20));
+				
+				resultado.add(seguimientoInfluenza);
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e);
+		} finally {
+			try {
+	            if (rs != null) {
+	                rs.close();
+	            }
+	            if (pstm != null) {
+	                pstm.close();
+	            }
+	            if (conn != null) {
+	                conn.close();
+	            }
+	
+	        } catch (SQLException ex) {
+				logger.error(" No se pudo cerrar conexión ", ex);
+	        }
+		}
+		return resultado;
+	}
+	
+	@Override
+	public List<HojaZika> getHojasZikaPendientesCarga() throws Exception {
+		conn = getConection();
+		List<HojaZika> resultado = new ArrayList<HojaZika>();
+		ResultSet rs = null;
+		try {
+			String query = "select sec_hoja_zika, cod_expediente, num_hoja_seguimiento, fif, fis, " //5
+					+ " to_char(fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "//7
+					+ " categoria, sintoma_inicial1, " 
+					+ " sintoma_inicial2, sintoma_inicial3, sintoma_inicial4, "
+					+ " repeat_key "
+					+ " from hoja_zika"
+					+ " where cerrado = ? "
+					+ " and (estado_carga = ? or estado_carga is null) order by sec_hoja_zika ";
+			
+			pstm = conn.prepareStatement(query);
+			pstm.setString(1, "S"); //hoja_zika.cerrado = "S"
+			pstm.setString(2, "0"); //hoja_zika.estado_carga = Pendiente
+			rs = pstm.executeQuery();
+			
+			while (rs.next()) {
+				HojaZika hojaZika = new HojaZika();
+				hojaZika.setSecHojaZika(rs.getInt(1));
+				hojaZika.setCodExpediente(rs.getInt(2));
+				hojaZika.setNumHojaSeguimiento(rs.getInt(3));
+				hojaZika.setFif(rs.getString(4));
+				hojaZika.setFis(rs.getString(5));
+				hojaZika.setFechaInicio(UtilDate.StringToDate(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
+				hojaZika.setFechaCierre(UtilDate.StringToDate(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
+				hojaZika.setCategoria(rs.getString(8));
+				hojaZika.setSintomaInicial1(rs.getString(9));
+				hojaZika.setSintomaInicial2(rs.getString(10));
+				hojaZika.setSintomaInicial3(rs.getString(11));
+				hojaZika.setSintomaInicial4(rs.getString(12));
+				hojaZika.setRepeatKey(rs.getString(13));
+				
+				resultado.add(hojaZika);
+			}
+		} catch (Exception e) {
+				e.printStackTrace();
+				throw new Exception(e);
+		} finally {
+			try {
+	            if (rs != null) {
+	                rs.close();
+	            }
+	            if (pstm != null) {
+	                pstm.close();
+	            }
+	            if (conn != null) {
+	                conn.close();
+	            }
+
+	        } catch (SQLException ex) {
+				logger.error(" No se pudo cerrar conexión ", ex);
+	        }
+		}
+        return resultado;
+	
+	}
+	
+	@Override
+	public List<SeguimientoZika> getSeguimientoZikaBySec(int secHojaZika) throws Exception {
+		conn = getConection();
+		List<SeguimientoZika> resultado = new ArrayList<SeguimientoZika>();
+		ResultSet rs = null;
+		try {
+			String query = " select sec_seg_zika, sec_hoja_zika, control_dia, to_char(fecha_seguimiento, 'dd-MM-yyyy'), "//4
+					+ " usuario_medico, supervisor, consulta_inicial, fiebre, astenia, "//9
+					+ " mal_estado_gral, escalosfrios, convulsiones, cefalea, rigidez_cuello, " //14
+					+ " dolor_retroocular, poco_apetito, nauseas, vomitos, diarrea, dolor_abdominal_continuo, " //20
+					+ " artralgia_proximal, artralgia_distal, mialgia, conjuntivitis_nopurulenta, "// 24
+					+ " edema_art_prox_ms, edema_art_dist_ms, edema_art_prox_mi, edema_art_dist_mi, "// 28
+					+ " edema_periauricular, adenopatia_cerv_ant, adenopatia_cerv_post, " // 31
+					+ " adenopatia_retro_auricular, rash, equimosis, prueba_torniquete_pos, " // 35
+					+ " epistaxis, gingivorragia, petequias_espontaneas, hematemesis, " // 39
+					+ " melena, oftalmoplejia, dificultad_respiratoria, debilidad_muscular_ms, " // 43
+					+ " debilidad_muscular_mi, parestesia_ms, parestesia_mi, paralisis_muscular_ms, " // 47
+					+ " paralisis_muscular_mi, tos, rinorrea, dolor_garganta, prurito, " // 52
+					+ " fotofobia, mareos, sudoracion " // 55
+					+ " from seguimiento_zika "
+					+ " where sec_hoja_zika = ? "
+					+ " order by control_dia asc ";
+			
+			pstm = conn.prepareStatement(query);
+			pstm.setInt(1, secHojaZika); //seguimiento_zika.sec_hoja_zika
+			rs = pstm.executeQuery();
+			
+			while (rs.next()) { 
+				SeguimientoZika seguimientoZika = new SeguimientoZika();
+				seguimientoZika.setSecSegZika(rs.getInt(1));//sec_seg_zika
+				seguimientoZika.setSecHojaZika(rs.getInt(2));//sec_hoja_zika
+				seguimientoZika.setControlDia(rs.getInt(3));//control_dia
+				seguimientoZika.setFechaSeguimiento(UtilDate.StringToDate(rs.getString(4),"dd-MM-yyyy"));//fecha_seguimiento
+				seguimientoZika.setUsuarioMedico(rs.getShort(5));//usuario_medico
+				seguimientoZika.setSupervisor(rs.getShort(6));//supervisor
+				seguimientoZika.setConsultaInicial(rs.getString(7));//consulta_inicial
+				seguimientoZika.setFiebre(rs.getString(8));//fiebre
+				seguimientoZika.setAstenia(rs.getString(9));//astenia
+				seguimientoZika.setMalEstadoGral(rs.getString(10));//mal_estado_gral
+				seguimientoZika.setEscalosfrios(rs.getString(11));//escalosfrios
+				seguimientoZika.setConvulsiones(rs.getString(12));//convulsiones
+				seguimientoZika.setCefalea(rs.getString(13));//cefalea
+				seguimientoZika.setRigidezCuello(rs.getString(14));//rigidez_cuello
+				seguimientoZika.setDolorRetroocular(rs.getString(15));//dolor_retroocular
+				seguimientoZika.setPocoApetito(rs.getString(16));//poco_apetito
+				seguimientoZika.setNauseas(rs.getString(17));//nauseas
+				seguimientoZika.setVomitos(rs.getString(18));//vomitos
+				seguimientoZika.setDiarrea(rs.getString(19));//diarrea
+				seguimientoZika.setDolorAbdominalContinuo(rs.getString(20));//dolor_abdominal_continuo
+				seguimientoZika.setArtralgiaProximal(rs.getString(21));//artralgia_proximal
+				seguimientoZika.setArtralgiaDistal(rs.getString(22));//artralgia_distal
+				seguimientoZika.setMialgia(rs.getString(23));//mialgia
+				seguimientoZika.setConjuntivitisNoPurulenta(rs.getString(24));//conjuntivitis_nopurulenta
+				seguimientoZika.setEdemaArtProxMS(rs.getString(25));//edema_art_prox_ms
+				seguimientoZika.setEdemaArtDistMS(rs.getString(26));//edema_art_dist_ms
+				seguimientoZika.setEdemaArtProxMI(rs.getString(27));//edema_art_prox_mi
+				seguimientoZika.setEdemaArtDistMI(rs.getString(28));//edema_art_dist_mi
+				seguimientoZika.setEdemaPeriauricular(rs.getString(29));//edema_periauricular
+				seguimientoZika.setAdenopatiaCervAnt(rs.getString(30));//adenopatia_cerv_ant
+				seguimientoZika.setAdenopatiaCervPost(rs.getString(31));//adenopatia_cerv_post
+				seguimientoZika.setAdenopatiaRetroAuricular(rs.getString(32));//adenopatia_retro_auricular
+				seguimientoZika.setRash(rs.getString(33));//rash
+				seguimientoZika.setEquimosis(rs.getString(34));//equimosis
+				seguimientoZika.setPruebaTorniquetePos(rs.getString(35));//prueba_torniquete_pos
+				seguimientoZika.setEpistaxis(rs.getString(36));//epistaxis
+				seguimientoZika.setGingivorragia(rs.getString(37));//gingivorragia
+				seguimientoZika.setPetequiasEspontaneas(rs.getString(38));//petequias_espontaneas
+				seguimientoZika.setHematemesis(rs.getString(39));//hematemesis
+				seguimientoZika.setMelena(rs.getString(40));//melena
+				seguimientoZika.setOftalmoplejia(rs.getString(41));//oftalmoplejia
+				seguimientoZika.setDificultadResp(rs.getString(42));//dificultad_respiratoria
+				seguimientoZika.setDebilidadMuscMS(rs.getString(43));//debilidad_muscular_ms
+				seguimientoZika.setDebilidadMuscMI(rs.getString(44));//debilidad_muscular_mi
+				seguimientoZika.setParestesiaMS(rs.getString(45));//parestesia_ms
+				seguimientoZika.setParestesiaMI(rs.getString(46));//parestesia_mi
+				seguimientoZika.setParalisisMuscMS(rs.getString(47));//paralisis_muscular_ms
+				seguimientoZika.setParalisisMuscMI(rs.getString(48));//paralisis_muscular_mi
+				seguimientoZika.setTos(rs.getString(49));//tos
+				seguimientoZika.setRinorrea(rs.getString(50));//rinorrea
+				seguimientoZika.setDolorGarganta(rs.getString(51));//dolor_garganta
+				seguimientoZika.setPrurito(rs.getString(52));//prurito
+				seguimientoZika.setFotofobia(rs.getString(53));//fotofobia
+				seguimientoZika.setMareos(rs.getString(54));//mareos
+				seguimientoZika.setSudoracion(rs.getString(55));//sudoracion
+				resultado.add(seguimientoZika);
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e);
+		} finally {
+			try {
+	            if (rs != null) {
+	                rs.close();
+	            }
+	            if (pstm != null) {
+	                pstm.close();
+	            }
+	            if (conn != null) {
+	                conn.close();
+	            }
+	
+	        } catch (SQLException ex) {
+				logger.error(" No se pudo cerrar conexión ", ex);
+	        }
+		}
+		return resultado;
+	}
+	
+	public void updateHojaInfluenza(HojaInfluenza hojaInfluenza) throws Exception {
+		PreparedStatement pst = null;
+		try {
+			conn = getConection();
+			pst = conn.prepareStatement("UPDATE hoja_influenza SET estado_carga = '1' where sec_hoja_influenza = ?");
+			pst.setInt(1, hojaInfluenza.getSecHojaInfluenza());
+	        pst.executeUpdate();
+	            
+		} catch (Exception e) {
+			 e.printStackTrace();
+	            logger.error("Se ha producido un error al guardar el registro :: hoja_influenza" + "\n" + e.getMessage(),e);
+	            throw new Exception(e);
+		} finally {
+            try {
+                if (pst != null) {
+                    pst.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+    			logger.error(" No se pudo cerrar conexión ", ex);
+            }
+        }
+	}
+	
+	public void updateHojaZika(HojaZika hojaZika) throws Exception {
+		PreparedStatement pst = null;
+		try {
+			conn = getConection();
+			pst = conn.prepareStatement("UPDATE hoja_zika SET estado_carga = '1' where sec_hoja_zika = ?");
+			pst.setInt(1, hojaZika.getSecHojaZika());
+	        pst.executeUpdate();
+	            
+		} catch (Exception e) {
+			 e.printStackTrace();
+	            logger.error("Se ha producido un error al guardar el registro :: hoja_zika" + "\n" + e.getMessage(),e);
+	            throw new Exception(e);
+		} finally {
+            try {
+                if (pst != null) {
+                    pst.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+    			logger.error(" No se pudo cerrar conexión ", ex);
+            }
+        }
+	}
+	
+	public void updateHojaInfluenzaRepeatKey(HojaInfluenza hojaInfluenza) throws Exception {
+		PreparedStatement pst = null;
+		try {
+			conn = getConection();
+			pst = conn.prepareStatement("UPDATE hoja_influenza SET repeat_key = ? where sec_hoja_influenza = ?");
+			pst.setString(1, hojaInfluenza.getRepeatKey());
+			pst.setInt(2, hojaInfluenza.getSecHojaInfluenza());
+	        pst.executeUpdate();
+	            
+		} catch (Exception e) {
+			 e.printStackTrace();
+	            logger.error("Se ha producido un error al guardar el registro :: hoja_influenza" + "\n" + e.getMessage(),e);
+	            throw new Exception(e);
+		} finally {
+            try {
+                if (pst != null) {
+                    pst.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+    			logger.error(" No se pudo cerrar conexión ", ex);
+            }
+        }
+	}
+	
+	public void updateHojaZikaRepeatKey(HojaZika hojaZika) throws Exception {
+		PreparedStatement pst = null;
+		try {
+			conn = getConection();
+			pst = conn.prepareStatement("UPDATE hoja_zika SET repeat_key = ? where sec_hoja_zika = ?");
+			pst.setString(1, hojaZika.getRepeatKey());
+			pst.setInt(2, hojaZika.getSecHojaZika());
+	        pst.executeUpdate();
+	            
+		} catch (Exception e) {
+			 e.printStackTrace();
+	            logger.error("Se ha producido un error al guardar el registro :: hoja_zika" + "\n" + e.getMessage(),e);
+	            throw new Exception(e);
+		} finally {
+            try {
+                if (pst != null) {
+                    pst.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
             } catch (SQLException ex) {
     			logger.error(" No se pudo cerrar conexión ", ex);
             }
