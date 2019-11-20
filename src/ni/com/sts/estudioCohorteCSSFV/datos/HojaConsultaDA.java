@@ -55,8 +55,8 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
   "transfusion_especificar,  tomando_medicamento,  medicamento_especificar,  medicamento_distinto,  medicamento_dist_especificar,  bhc,  serologia_dengue,  serologia_chik, "+
   "gota_gruesa,  extendido_periferico,  ego,  egh,  citologia_fecal,  factor_reumatoideo,  albumina,  ast_alt,  bilirrubinas,  cpk,  colesterol,  influenza,  otro_examen_lab, "+
   "num_orden_laboratorio,  acetaminofen,  asa,  ibuprofen,  penicilina,  amoxicilina,  dicloxacilina,  otro_antibiotico,  furazolidona,  metronidazol_tinidazol,  albendazol_mebendazol, "+
-  "sulfato_ferroso,  suero_oral,  sulfato_zinc,  liquidos_iv,  prednisona,  hidrocortisona_iv,  salbutamol,  oseltamivir,  diagnostico1,  diagnostico2,  diagnostico3, "+
-  "diagnostico4,  otro_diagnostico,  proxima_cita,  am_pm_ult_dia_fiebre,  to_char(hora_ult_dosis_antipiretico, 'dd/MM/yyyy HH12:MI:SS'), "+
+  "sulfato_ferroso,  suero_oral,  sulfato_zinc,  liquidos_iv,  prednisona,  hidrocortisona_iv,  salbutamol,  oseltamivir, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico1) as diagnostico1, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico2) as diagnostico2, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico3) as diagnostico3, "+
+  "(SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico4) as diagnostico4,  otro_diagnostico,  proxima_cita,  am_pm_ult_dia_fiebre,  to_char(hora_ult_dosis_antipiretico, 'dd/MM/yyyy HH12:MI:SS'), "+
   "am_pm_ult_dosis_antipiretico, fis,  fif,  hepatomegalia_cm,  eritrocitos, fecha_linfocitos, to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), fecha_cierre_cambio_turno, usuario_medico, usuario_enfermeria, turno, " +
   "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv, expediente_fisico, colegio " +
 					" from hoja_consulta "+
@@ -475,7 +475,13 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					+ " consulta_inicial, fiebre, tos, secrecion_nasal, dolor_garganta, "/*9*/
 					+ " congestion_nasa, dolor_cabeza, falta_apetito, dolor_muscular, "/*13*/
 					+ " dolor_articular, dolor_oido, respiracion_rapida, dificultad_respirar, "/*17*/
-					+ " falta_escuela, quedo_en_cama, control_dia "
+					+ " falta_escuela, quedo_en_cama, control_dia,"
+					+ " fiebre_leve, fiebre_moderada, fiebre_severa, tos_leve, tos_moderada, "
+					+ " tos_severa, secrecion_nasal_leve, secrecion_nasal_moderada, "
+					+ "	secrecion_nasal_severa, dolor_garganta_leve, dolor_garganta_moderada, "
+					+ "	dolor_garganta_severa, dolor_cabeza_leve, dolor_cabeza_moderada, "
+					+ "	dolor_cabeza_severa, dolor_muscular_leve, dolor_muscular_moderada, "
+					+ "	dolor_muscular_severa, dolor_articular_leve, dolor_articular_moderada, dolor_articular_severa "
 					+ " from seguimiento_influenza "
 					+ " where sec_hoja_influenza = ? "
 					+ " order by control_dia asc ";
@@ -506,7 +512,28 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				seguimientoInfluenza.setFaltaEscuela(rs.getString(18));
 				seguimientoInfluenza.setQuedoEnCama(rs.getString(19));
 				seguimientoInfluenza.setControlDia(rs.getInt(20));
-				
+				//Intensidad de los sintomas agregados 17/10/2019
+				seguimientoInfluenza.setFiebreLeve(rs.getString(21) != null ? rs.getString(21) : null);
+				seguimientoInfluenza.setFiebreModerada(rs.getString(22) != null ? rs.getString(22) : null);
+				seguimientoInfluenza.setFiebreSevera(rs.getString(23) != null ? rs.getString(23) : null);
+				seguimientoInfluenza.setTosLeve(rs.getString(24) != null ? rs.getString(24) : null);
+				seguimientoInfluenza.setTosModerada(rs.getString(25) != null ? rs.getString(25) : null);
+				seguimientoInfluenza.setTosSevera(rs.getString(26) != null ? rs.getString(26) : null);
+				seguimientoInfluenza.setSecrecionNasalLeve(rs.getString(27) != null ? rs.getString(27) : null);
+				seguimientoInfluenza.setSecrecionNasalModerada(rs.getString(28) != null ? rs.getString(28) : null);
+				seguimientoInfluenza.setSecrecionNasalSevera(rs.getString(29) != null ? rs.getString(29) : null);
+				seguimientoInfluenza.setDolorGargantaLeve(rs.getString(30) != null ? rs.getString(30) : null);
+				seguimientoInfluenza.setDolorGargantaModerada(rs.getString(31) != null ? rs.getString(31) : null);
+				seguimientoInfluenza.setDolorGargantaSevera(rs.getString(32) != null ? rs.getString(32) : null);
+				seguimientoInfluenza.setDolorCabezaLeve(rs.getString(33) != null ? rs.getString(33) : null);
+				seguimientoInfluenza.setDolorCabezaModerada(rs.getString(34) != null ? rs.getString(34) : null);
+				seguimientoInfluenza.setDolorCabezaSevera(rs.getString(35) != null ? rs.getString(35) : null);
+				seguimientoInfluenza.setDolorMuscularLeve(rs.getString(36) != null ? rs.getString(36) : null);
+				seguimientoInfluenza.setDolorMuscularModerada(rs.getString(37) != null ? rs.getString(37) : null);
+				seguimientoInfluenza.setDolorMuscularSevera(rs.getString(38) != null ? rs.getString(38) : null);
+				seguimientoInfluenza.setDolorArticularLeve(rs.getString(39) != null ? rs.getString(39) : null);
+				seguimientoInfluenza.setDolorArticularModerada(rs.getString(40) != null ? rs.getString(40) : null);
+				seguimientoInfluenza.setDolorArticularSevera(rs.getString(41) != null ? rs.getString(41) : null);
 				resultado.add(seguimientoInfluenza);
 			}
 			
