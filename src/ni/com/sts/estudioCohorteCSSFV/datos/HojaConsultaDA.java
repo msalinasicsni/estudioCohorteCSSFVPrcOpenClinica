@@ -62,7 +62,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					" from hoja_consulta "+
 							"where estado = ? "+
 							"and (estado_carga = ? or estado_carga is null) "+
-							"and to_char(fecha_cierre, 'dd-MM-yyyy') < to_char(current_date, 'dd-MM-yyyy') order by sec_hoja_consulta ";
+							"and to_char(fecha_cierre, 'yyyyMMdd') < to_char(current_date, 'yyyyMMdd') order by sec_hoja_consulta ";
 
 			pstm = conn.prepareStatement(query);
 			pstm.setString(1, "7"); //hoja_consulta.estado = cerrado
@@ -482,7 +482,11 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					+ "	secrecion_nasal_severa, dolor_garganta_leve, dolor_garganta_moderada, "
 					+ "	dolor_garganta_severa, dolor_cabeza_leve, dolor_cabeza_moderada, "
 					+ "	dolor_cabeza_severa, dolor_muscular_leve, dolor_muscular_moderada, "
-					+ "	dolor_muscular_severa, dolor_articular_leve, dolor_articular_moderada, dolor_articular_severa "
+					+ "	dolor_muscular_severa, dolor_articular_leve, dolor_articular_moderada, dolor_articular_severa,"
+					+ " cuadro_confusional, "
+					+ " cuadro_neurologico, "
+					+ " confusion_mental, anosmia, ageusia, "
+					+ " mareo, ictus, sincope "
 					+ " from seguimiento_influenza "
 					+ " where sec_hoja_influenza = ? "
 					+ " order by control_dia asc ";
@@ -535,6 +539,15 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				seguimientoInfluenza.setDolorArticularLeve(rs.getString(39) != null ? rs.getString(39) : null);
 				seguimientoInfluenza.setDolorArticularModerada(rs.getString(40) != null ? rs.getString(40) : null);
 				seguimientoInfluenza.setDolorArticularSevera(rs.getString(41) != null ? rs.getString(41) : null);
+				/*Nuevos sintomas agregados*/
+				seguimientoInfluenza.setCuadroConfusional(rs.getString(42) != null ? rs.getString(42) : null);
+				seguimientoInfluenza.setCuadroNeurologico(rs.getString(43) != null ? rs.getString(43) : null);
+				seguimientoInfluenza.setConfusionMental(rs.getString(44) != null ? rs.getString(44) : null);
+				seguimientoInfluenza.setAnosmia(rs.getString(45) != null ? rs.getString(45) : null);
+				seguimientoInfluenza.setAgeusia(rs.getString(46) != null ? rs.getString(46) : null);
+				seguimientoInfluenza.setMareo(rs.getString(47) != null ? rs.getString(47) : null);
+				seguimientoInfluenza.setIctus(rs.getString(48) != null ? rs.getString(48) : null);
+				seguimientoInfluenza.setSincope(rs.getString(49) != null ? rs.getString(49) : null);
 				resultado.add(seguimientoInfluenza);
 			}
 			
@@ -821,6 +834,33 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 		} catch (Exception e) {
 			 e.printStackTrace();
 	            logger.error("Se ha producido un error al guardar el registro :: hoja_zika" + "\n" + e.getMessage(),e);
+	            throw new Exception(e);
+		} finally {
+            try {
+                if (pst != null) {
+                    pst.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+    			logger.error(" No se pudo cerrar conexión ", ex);
+            }
+        }
+	}
+	
+	public void updateHojaConsultaRepeatKey(HojaConsulta hojaConsulta) throws Exception {
+		PreparedStatement pst = null;
+		try {
+			conn = getConection();
+			pst = conn.prepareStatement("UPDATE hoja_consulta SET repeat_key = ? where sec_hoja_consulta = ?");
+			pst.setString(1, hojaConsulta.getRepeatKey());
+			pst.setInt(2, hojaConsulta.getSecHojaConsulta());
+	        pst.executeUpdate();
+	            
+		} catch (Exception e) {
+			 e.printStackTrace();
+	            logger.error("Se ha producido un error al guardar el registro :: hoja_consulta" + "\n" + e.getMessage(),e);
 	            throw new Exception(e);
 		} finally {
             try {

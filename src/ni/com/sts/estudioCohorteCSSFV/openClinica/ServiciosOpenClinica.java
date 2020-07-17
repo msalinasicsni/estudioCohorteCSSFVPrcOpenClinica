@@ -34,6 +34,7 @@ import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoInfluenza;
 import ni.com.sts.estudioCohorteCSSFV.modelo.SeguimientoZika;
 import ni.com.sts.estudioCohorteCSSFV.modelo.UsuariosView;
 import ni.com.sts.estudioCohorteCSSFV.servicios.UsuariosService;
+import ni.com.sts.estudioCohorteCSSFV.thread.CargaAutomaticaOpenClinicaThread;
 import ni.com.sts.estudioCohorteCSSFV.util.InfoResultado;
 import ni.com.sts.estudioCohorteCSSFV.util.UtilDate;
 import ni.com.sts.estudioCohorteCSSFV.util.UtilLog;
@@ -53,6 +54,7 @@ public class ServiciosOpenClinica {
 	private final Logger logger = Logger.getLogger(this.getClass());
 	private CompositeConfiguration config;
 	private UsuariosService usuarioService = new UsuariosDA();
+	//private CargaAutomaticaOpenClinicaThread cargaAutomaticaOpenClinicaThread = new CargaAutomaticaOpenClinicaThread();
 	
 	public ServiciosOpenClinica(){
 		config = UtilProperty.getConfigurationfromExternalFile("estudioCohorteCSSFVOPC.properties");
@@ -139,7 +141,7 @@ public class ServiciosOpenClinica {
 			ScheduleResponse response =	wsEvent.schedule(scheduleRequest);
 
 			logger.info("respuesta event schedule result: "+response.getResult());
-			System.out.println("respuesta event schedule result: "+response.getResult());
+			System.out.println(getFechaHoraActual()+" "+"respuesta event schedule result: "+response.getResult());
 			
 			if (response.getResult().toUpperCase().equalsIgnoreCase("SUCCESS")){
 				resultado.setOk(true);
@@ -151,7 +153,7 @@ public class ServiciosOpenClinica {
 				resultado.setObjeto(response);
 				for(String error: response.getError()){
 					logger.info("Detalle Error: "+error);
-					System.out.println("Detalle Error: "+error);
+					System.out.println(getFechaHoraActual()+" "+"Detalle Error: "+error);
 				}
 			}
 			
@@ -1168,7 +1170,12 @@ public class ServiciosOpenClinica {
         Name name4 = soapFactory.createName("StudyEventData");
         SOAPElement soapBodyElem4 = soapBodyElem3.addChildElement(name4);
         soapBodyElem4.setAttribute("StudyEventOID", config.getString("data.import.eventDefinitionOID"));
-        soapBodyElem4.setAttribute("StudyEventRepeatKey", repeatKey);
+        //soapBodyElem4.setAttribute("StudyEventRepeatKey", repeatKey);
+        if (hoja.getRepeatKey() == null) {
+        	soapBodyElem4.setAttribute("StudyEventRepeatKey", repeatKey);
+        } else {
+        	soapBodyElem4.setAttribute("StudyEventRepeatKey", hoja.getRepeatKey());
+        }
         
         //<FormData FormOID="F_HOJADECONSUL_23">
         Name name5 = soapFactory.createName("FormData");
@@ -1180,7 +1187,13 @@ public class ServiciosOpenClinica {
         SOAPElement soapBodyElem6 = soapBodyElem5.addChildElement(name6);
         soapBodyElem6.setAttribute("ItemGroupOID", "IG_HOJAD_UNGROUPED");
         soapBodyElem6.setAttribute("ItemGroupRepeatKey", itemGroupRepeatKey);
-        soapBodyElem6.setAttribute("TransactionType", "Insert");
+        //soapBodyElem6.setAttribute("TransactionType", "Insert");
+        
+        if (hoja.getRepeatKey() == null) {
+        	soapBodyElem6.setAttribute("TransactionType", "Insert");
+        } else {
+        	soapBodyElem6.setAttribute("TransactionType", "Update");
+        }
         
         //<ItemData ItemOID="I_HOJAD_NUM" Value="4"/>
 		Name name7 = soapFactory.createName("ItemData");
@@ -1255,8 +1268,11 @@ public class ServiciosOpenClinica {
 							}
 						}else if (nombre.trim().equals("HORAULTDOSISANTIPIRETICO")){
 							String ampm = hoja.getAmPmUltDosisAntipiretico();
+							String ampmResult1 = ampm.replaceAll(" ", "");
+							String ampmResult = ampmResult1.replaceAll("\\.", "");
 							String soloHora = UtilDate.DateToString(hoja.getHoraUltDosisAntipiretico(),"hh:mm:ss");
-							String hora = UtilDate.DateToString(UtilDate.StringToDate(UtilDate.DateToString(new Date(), "dd/MM/yyyy") + " " + soloHora + " " + ampm.toUpperCase() , "dd/MM/yyyy h:mm:ss a",Locale.US),"HH:mm");
+							//String hora = UtilDate.DateToString(UtilDate.StringToDate(UtilDate.DateToString(new Date(), "dd/MM/yyyy") + " " + soloHora + " " + ampm.toUpperCase() , "dd/MM/yyyy h:mm:ss a",Locale.US),"HH:mm");
+							String hora = UtilDate.DateToString(UtilDate.StringToDate(UtilDate.DateToString(new Date(), "dd/MM/yyyy") + " " + soloHora + " " + ampmResult.toUpperCase().trim() , "dd/MM/yyyy h:mm:ss a",Locale.US),"HH:mm");
 							addSoapItem(name7, soapBodyElem6, datosCrfArray[0], hora.trim(), 1);
 						}else if (nombre.trim().equals("FECHACONSULTA")){
 							//sacar FSUPERVISOR,FENFERMERIA
@@ -1394,14 +1410,14 @@ public class ServiciosOpenClinica {
         logger.debug(baos.toString());
         String strResultado = soapResponse.getSOAPBody().getElementsByTagName("result").item(0).getFirstChild().getNodeValue();
         logger.debug("Importa Data response = "+strResultado);
-        System.out.println("Importa Data response = "+strResultado);
+        System.out.println(getFechaHoraActual()+" "+"Importa Data response = "+strResultado);
         if (strResultado.toUpperCase().equalsIgnoreCase("SUCCESS")){
 			resultado.setOk(true);
 			resultado.setObjeto(baos);
 		}else {
 			resultado.setOk(false);
 			String strError = soapResponse.getSOAPBody().getElementsByTagName("error").item(0).getFirstChild().getNodeValue();
-			System.out.println(strError);
+			System.out.println(getFechaHoraActual()+" "+strError);
 			resultado.setMensaje(strError);
 			resultado.setObjeto(baos);
 		}
@@ -1715,5 +1731,19 @@ public class ServiciosOpenClinica {
 			return "48";
 		} 
 		return valor;
+	}
+	
+	public String getFechaHoraActual() {
+		String fecha = null;
+		try {
+			DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+			Date date = new Date();
+			
+			fecha = dateFormat.format(date);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return fecha;
 	}
 }

@@ -31,4 +31,6 @@ public interface HojaConsultaService {
 	public void updateHojaZika(HojaZika hojaZika) throws Exception;
 	
 	public void updateHojaZikaRepeatKey(HojaZika hojaZika) throws Exception;
+	
+	public void updateHojaConsultaRepeatKey(HojaConsulta hojaConsulta) throws Exception;// 07/02/2020
 }

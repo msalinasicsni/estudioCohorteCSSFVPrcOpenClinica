@@ -51,8 +51,8 @@ public class PacienteDA extends ConnectionDAO implements PacienteService {
 		    	paciente.setSexo(rs.getString("sexo").charAt(0));
 		    	paciente.setFechaNac(rs.getDate("fecha_nac"));
 		    	paciente.setEdad(rs.getShort("edad"));
-		    	paciente.setEstudiante(rs.getString("estudiante").charAt(0));
-		    	paciente.setTurno(rs.getString("turno").charAt(0));
+		    	paciente.setEstudiante(rs.getString("estudiante") != null ? rs.getString("estudiante").charAt(0) : null);
+		    	paciente.setTurno(rs.getString("turno") != null ? rs.getString("turno").charAt(0) : null);
 		    	paciente.setEscuela(rs.getShort("escuela"));
 		    	paciente.setTutorNombre1(rs.getString("tutor_nombre1"));
 		    	paciente.setTutorNombre2(rs.getString("tutor_nombre2"));

@@ -2,6 +2,8 @@ package ni.com.sts.estudioCohorteCSSFV.thread;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -48,29 +50,32 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 			try{
 				config = UtilProperty.getConfigurationfromExternalFile("estudioCohorteCSSFVOPC.properties");
 				UtilLog.setLog(config.getString("estudioCohorteCSSFVOPC.log"));
-				logger.info(this.getName()+" - inicia");			
+				logger.info(this.getName()+" - inicia");
+				System.out.println(getFechaHoraActual()+" "+"INICIO DEL PROCESO");
 				//consultar si no se a ejecutado proceso el dia de hoy,si ya se ejecuto se duerme 1 hora
 				//obtener parámetro con hora de ejecución
 				//validar si ya es hora de ejecutar proceso
 				//Si se ejecuta proceso registrar inicio de proceso, sino dormir 5 minutos
 				//consultar hojas de consulta a procesar
 				// por cada hoja procesada actualizar registro
-				//registrar fin de proceso			
+				//registrar fin de proceso
+				
 				HistEjecucionProcesoAutomatico ejecucionProcesoHoy = histEjecucionProcesoService.getEjecucionProcesoFechaHoy("OPENCLINICA");
 				if (ejecucionProcesoHoy!=null){
 					logger.debug("Se duerme main una hora ya se ejecutó el dia de hoy");
-					System.out.println("Se duerme main una hora ya se ejecutó el dia de hoy " + ejecucionProcesoHoy.getSecEjecucion());
+					System.out.println(getFechaHoraActual()+" "+"Se duerme main una hora ya se ejecutó el dia de hoy " + ejecucionProcesoHoy.getSecEjecucion());
 					this.sleep(3600000);//3600000 si ya se ejecuto se duerme una hora, por si se cambia el parámetro de la hora ejecución se vuelva a ejecutar
 					logger.debug("despierta main");
-					System.out.println("despierta main");				
+					System.out.println(getFechaHoraActual()+" "+"despierta main");	
+					
 				}else{
 					String valor = parametroService.getParametroByName("HORA_EJECUCION_CAOC");
 					if (valor!=null){
-						System.out.println("HORA_EJECUCION_CAOC = "+valor);
+						System.out.println(getFechaHoraActual()+" "+"HORA_EJECUCION_CAOC = "+valor);
 						Date dFechaHoy = new Date();
 						String sFechaHoy = UtilDate.DateToString(dFechaHoy, "dd/MM/yyyy");
 						Date dFechaEjecucion = UtilDate.StringToDate(sFechaHoy+" "+valor, "dd/MM/yyyy HH:mm");
-						System.out.println(dFechaEjecucion.compareTo(dFechaHoy));
+						System.out.println(getFechaHoraActual()+" "+dFechaEjecucion.compareTo(dFechaHoy));
 						if (dFechaEjecucion.compareTo(dFechaHoy) < 0){
 							
 							List<HojaConsulta> hojasPendientesCarga = hojaConsultaService.getHojasConsultaPendientesCarga();
@@ -78,21 +83,73 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 							List<HojaZika> hojasZikaPendientesCarga = hojaConsultaService.getHojasZikaPendientesCarga();
 							
 							logger.debug("hojasPendientesCarga.size() :: "+hojasPendientesCarga.size());
-							System.out.println("hojasPendientesCarga.size() :: "+hojasPendientesCarga.size());
+							System.out.println(getFechaHoraActual()+" "+"hojasPendientesCarga.size() :: "+hojasPendientesCarga.size());
+							
+							InfoResultado registroProceso = new InfoResultado();
+														
+							if (hojasPendientesCarga.size() > 0 || hojasInfluenzaPendientesCarga.size() > 0 
+									|| hojasZikaPendientesCarga.size() > 0) {
+								registroProceso = histEjecucionProcesoService.registrarEjecucionProceso("OPENCLINICA");
+								registroProceso.setOk(true);
+							}
 							
 							if (hojasPendientesCarga.size()>0){
 								EventScheduleParams eventParams;
-								InfoResultado registroProceso = histEjecucionProcesoService.registrarEjecucionProceso("OPENCLINICA");
-								registroProceso.setOk(true);
+								//InfoResultado registroProceso = histEjecucionProcesoService.registrarEjecucionProceso("OPENCLINICA");
+								//registroProceso.setOk(true);
 								if (registroProceso.isOk()){
 									int sec=1;
 									ServiciosOpenClinica cliente = new ServiciosOpenClinica();
 									for(HojaConsulta hoja:hojasPendientesCarga){
 										logger.debug("sec_hoja_consulta :: " +hoja.getSecHojaConsulta());
-										System.out.println("sec_hoja_consulta :: " +hoja.getSecHojaConsulta());
+										System.out.println(getFechaHoraActual()+" "+"sec_hoja_consulta :: " +hoja.getSecHojaConsulta());
 										//se consumen webservices
 										InfoResultado resultado = new InfoResultado();
-										Paciente paciente = pacienteService.getPacienteById(hoja.getCodExpediente());
+										
+										if (hoja.getRepeatKey() == null) { // 07/02/2020
+											Paciente paciente = pacienteService.getPacienteById(hoja.getCodExpediente());
+											eventParams = new EventScheduleParams();
+											eventParams.setLabel(String.valueOf(paciente.getCodExpediente())); //<label>9803</label>
+											eventParams.setEventDefinitionOID(config.getString("event.schedule.eventDefinitionOID"));//<eventDefinitionOID>SE_CONSULTACS</eventDefinitionOID>
+											eventParams.setLocation(config.getString("event.schedule.location")); //<location>CS</location>
+											eventParams.setIdentifier(config.getString("event.schedule.identifier")); //<identifier>S_1</identifier>
+											eventParams.setSiteidentifier(config.getString("event.schedule.site.identifier")); //<identifier></identifier>
+											eventParams.setStartDate(hoja.getFechaConsulta()); //<startDate>2008-12-12</startDate> //<startTime>12:00</startTime>
+											if (hoja.getFechaCierre()!=null){
+												eventParams.setEndDate(hoja.getFechaCierre()); //<endDate>2008-12-12</endDate> //<endTime>15:00</endTime>
+											}else {
+												eventParams.setEndDate(null);
+											}
+											resultado = cliente.consumirEventCliente(eventParams);
+											if (resultado.isOk()){
+												hoja.setRepeatKey(resultado.getMensaje()); //07/02/2020
+												hojaConsultaService.updateHojaConsultaRepeatKey(hoja); //07/02/2020
+												resultado = cliente.consumirDataClienteV2(hoja, sec, resultado.getMensaje());
+												if (resultado.isOk()){
+													//se registra estado carga cerrado
+													hoja.setEstadoCarga('1');
+													hojaConsultaService.updateHojaConsulta(hoja);
+													logger.debug("Hoja de consulta procesada: "+hoja.getSecHojaConsulta());												
+												}else{
+													logger.error(resultado.getMensaje());
+												}
+											}else{
+												logger.error(resultado.getMensaje());
+											}
+											sec ++;
+										} else {
+											resultado = cliente.consumirDataClienteV2(hoja, sec, resultado.getMensaje());
+											if (resultado.isOk()){
+												//se registra estado carga cerrado
+												hoja.setEstadoCarga('1');
+												hojaConsultaService.updateHojaConsulta(hoja);
+												logger.debug("Hoja de consulta procesada: "+hoja.getSecHojaConsulta());												
+											}else{
+												logger.error(resultado.getMensaje());
+											}
+											sec ++;
+										}
+/*										Paciente paciente = pacienteService.getPacienteById(hoja.getCodExpediente());
 										eventParams = new EventScheduleParams();
 										eventParams.setLabel(String.valueOf(paciente.getCodExpediente())); //<label>9803</label>
 										eventParams.setEventDefinitionOID(config.getString("event.schedule.eventDefinitionOID"));//<eventDefinitionOID>SE_CONSULTACS</eventDefinitionOID>
@@ -119,9 +176,9 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 										}else{
 											logger.error(resultado.getMensaje());
 										}
-										sec ++; //secuencia para id hoja en data import
+										sec ++; //secuencia para id hoja en data import */
 									}
-								}else{
+								} else {
 									logger.error(registroProceso.getMensaje());
 								}
 							}/*else{
@@ -135,7 +192,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 							//-----------------------------------Hoja Influenza------------------------------------------------
 							
 							logger.debug("hojasInfluenzaPendientesCarga.size() :: "+hojasInfluenzaPendientesCarga.size());
-							System.out.println("hojasInfluenzaPendientesCarga.size() :: "+hojasInfluenzaPendientesCarga.size());
+							System.out.println(getFechaHoraActual()+" "+"hojasInfluenzaPendientesCarga.size() :: "+hojasInfluenzaPendientesCarga.size());
 							
 							// verificamos si hay hojas de influneza pendientes para subir a openClinica
 							if (hojasInfluenzaPendientesCarga.size()>0) {
@@ -146,7 +203,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 								for(HojaInfluenza hojaInfluenza:hojasInfluenzaPendientesCarga) {
 									
 									logger.debug("sec_hoja_influenza :: " +hojaInfluenza.getSecHojaInfluenza());
-									System.out.println("sec_hoja_influenza :: " +hojaInfluenza.getSecHojaInfluenza());
+									System.out.println(getFechaHoraActual()+" "+"sec_hoja_influenza :: " +hojaInfluenza.getSecHojaInfluenza());
 									
 									List<SeguimientoInfluenza> seguimientoInfluenzas = hojaConsultaService.getSeguimientoInfluenzaBySec(hojaInfluenza.getSecHojaInfluenza());
 									
@@ -206,7 +263,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 							//-----------------------------------Hoja Zika----------------------------------------------------
 							
 							logger.debug("hojasZikaPendientesCarga.size() :: "+hojasZikaPendientesCarga.size());
-							System.out.println("hojasZikaPendientesCarga.size() :: "+hojasZikaPendientesCarga.size());
+							System.out.println(getFechaHoraActual()+" "+"hojasZikaPendientesCarga.size() :: "+hojasZikaPendientesCarga.size());
 							
 							// verificamos si hay hojas de zika pendientes para subir a openClinica
 							if (hojasZikaPendientesCarga.size()>0) {
@@ -217,7 +274,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 								for(HojaZika hojaZika:hojasZikaPendientesCarga) {
 									
 									logger.debug("sec_hoja_zika :: " +hojaZika.getSecHojaZika());
-									System.out.println("sec_hoja_zika :: " +hojaZika.getSecHojaZika());
+									System.out.println(getFechaHoraActual()+" "+"sec_hoja_zika :: " +hojaZika.getSecHojaZika());
 									
 									List<SeguimientoZika> seguimientoZika = hojaConsultaService.getSeguimientoZikaBySec(hojaZika.getSecHojaZika());
 									
@@ -278,26 +335,26 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 							if (hojasPendientesCarga.size() <= 0 && hojasInfluenzaPendientesCarga.size() <= 0 
 									&& hojasZikaPendientesCarga.size() <= 0) {
 								logger.debug("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
-								System.out.println("Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
+								System.out.println(getFechaHoraActual()+" "+"Se duerme main 5 min. No se encontraron hojas de consulta a cargar");
 								this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
 								logger.debug("despierta main");
-								System.out.println("despierta main");
+								System.out.println(getFechaHoraActual()+" "+"despierta main");
 							}
 							/*-------------------------------------------------------------------------------------------------*/
 							
 						 } else {
 							logger.debug("Se duerme main 5 min");
-							System.out.println("Se duerme main 5 min");
+							System.out.println(getFechaHoraActual()+" "+"Se duerme main 5 min");
 							this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
 							logger.debug("despierta main");
-							System.out.println("despierta main");
+							System.out.println(getFechaHoraActual()+" "+"despierta main");
 						} 
 					} else {
 						logger.debug("Se duerme main 5 min. No se encontró valor de parámetro HORA_EJECUCION_CAOC");
-						System.out.println("Se duerme main 5 min. No se encontró valor de parámetro HORA_EJECUCION_CAOC");
+						System.out.println(getFechaHoraActual()+" "+"Se duerme main 5 min. No se encontró valor de parámetro HORA_EJECUCION_CAOC");
 						this.sleep(300000);//300000 si aún no es hora de ejecutar proceso se duerme 5 minutos
 						logger.debug("despierta main");
-						System.out.println("despierta main");
+						System.out.println(getFechaHoraActual()+" "+"despierta main");
 					}
 				}	
 			}catch(Exception ex){
@@ -305,7 +362,22 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 				logger.error(ex);
 			}finally{
 				logger.info(this.getName()+" - finalizado");
+				System.out.println(getFechaHoraActual()+" "+"FIN DEL PROCESO");
 			}
 		}
-	}	
+	}
+	
+	public String getFechaHoraActual() {
+		String fecha = null;
+		try {
+			DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+			Date date = new Date();
+			
+			fecha = dateFormat.format(date);
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return fecha;
+	}
 }
