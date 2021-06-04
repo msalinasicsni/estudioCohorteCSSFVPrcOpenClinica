@@ -62,7 +62,8 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					" from hoja_consulta "+
 							"where estado = ? "+
 							"and (estado_carga = ? or estado_carga is null) "+
-							"and to_char(fecha_cierre, 'yyyyMMdd') < to_char(current_date, 'yyyyMMdd') order by sec_hoja_consulta ";
+							"and date(fecha_cierre) <= date(current_date) order by sec_hoja_consulta ";
+							/*"and to_char(fecha_cierre, 'yyyyMMdd') < to_char(current_date, 'yyyyMMdd') order by sec_hoja_consulta ";*/
 
 			pstm = conn.prepareStatement(query);
 			pstm.setString(1, "7"); //hoja_consulta.estado = cerrado
