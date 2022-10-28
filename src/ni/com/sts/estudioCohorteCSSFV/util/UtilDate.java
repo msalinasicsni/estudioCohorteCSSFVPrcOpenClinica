@@ -11,11 +11,17 @@ public class UtilDate {
 		SimpleDateFormat sdf = new SimpleDateFormat(formato);
 		return sdf.format(fecha);
 	}
+	
+	public static String DateToString(Date fecha, String formato, Locale locale){
+        SimpleDateFormat sdf = new SimpleDateFormat(formato, locale);
+        return sdf.format(fecha);
+    }
 
-	public static Date StringToDate(String fecha, String formato) throws ParseException{
-		SimpleDateFormat sdf = new SimpleDateFormat(formato);
-		return sdf.parse(fecha);
-	}
+	 public static Date StringToDate2(String fecha, String formato) throws
+	 	ParseException{ SimpleDateFormat sdf = new SimpleDateFormat(formato); return
+	 	sdf.parse(fecha); 
+	 }
+	 
 	
 	public static Date StringToDate(String fecha, String formato, Locale locale) throws ParseException{
 		SimpleDateFormat sdf = new SimpleDateFormat(formato, locale);

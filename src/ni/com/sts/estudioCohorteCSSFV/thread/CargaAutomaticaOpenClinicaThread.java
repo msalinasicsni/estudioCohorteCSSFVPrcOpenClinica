@@ -74,7 +74,7 @@ public class CargaAutomaticaOpenClinicaThread extends Thread {
 						System.out.println(getFechaHoraActual()+" "+"HORA_EJECUCION_CAOC = "+valor);
 						Date dFechaHoy = new Date();
 						String sFechaHoy = UtilDate.DateToString(dFechaHoy, "dd/MM/yyyy");
-						Date dFechaEjecucion = UtilDate.StringToDate(sFechaHoy+" "+valor, "dd/MM/yyyy HH:mm");
+						Date dFechaEjecucion = UtilDate.StringToDate2(sFechaHoy+" "+valor, "dd/MM/yyyy HH:mm");
 						System.out.println(getFechaHoraActual()+" "+dFechaEjecucion.compareTo(dFechaHoy));
 						if (dFechaEjecucion.compareTo(dFechaHoy) < 0){
 							

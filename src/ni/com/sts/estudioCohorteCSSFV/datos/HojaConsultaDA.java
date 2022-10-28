@@ -58,11 +58,13 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
   "sulfato_ferroso,  suero_oral,  sulfato_zinc,  liquidos_iv,  prednisona,  hidrocortisona_iv,  salbutamol,  oseltamivir, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico1) as diagnostico1, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico2) as diagnostico2, (SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico3) as diagnostico3, "+
   "(SELECT codigo_dignostico FROM diagnostico where sec_diagnostico = diagnostico4) as diagnostico4,  otro_diagnostico,  proxima_cita,  am_pm_ult_dia_fiebre,  to_char(hora_ult_dosis_antipiretico, 'dd/MM/yyyy HH12:MI:SS'), "+
   "am_pm_ult_dosis_antipiretico, fis,  fif,  hepatomegalia_cm,  eritrocitos, fecha_linfocitos, to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), fecha_cierre_cambio_turno, usuario_medico, usuario_enfermeria, turno, " +
-  "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv, expediente_fisico, colegio " +
+  "horario_clases, otro, pad, pas, telef, hemoconc, vomito12h, oel, hora, horasv, expediente_fisico, colegio, supervisor, repeat_key " +
 					" from hoja_consulta "+
 							"where estado = ? "+
 							"and (estado_carga = ? or estado_carga is null) "+
-							"and date(fecha_cierre) <= date(current_date) order by sec_hoja_consulta ";
+							"and date(fecha_cierre) <= date(current_date) " +
+							"and usuario_medico not in(94, 60, 16, 98, 133) and usuario_enfermeria not in(94, 60, 16, 98, 133) " +
+							"order by sec_hoja_consulta";
 							/*"and to_char(fecha_cierre, 'yyyyMMdd') < to_char(current_date, 'yyyyMMdd') order by sec_hoja_consulta ";*/
 
 			pstm = conn.prepareStatement(query);
@@ -74,7 +76,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				dato.setSecHojaConsulta(rs.getInt(1));
 				dato.setCodExpediente(rs.getInt(2));
 				dato.setNumHojaConsulta(rs.getInt(3));
-				dato.setFechaConsulta(UtilDate.StringToDate(rs.getString(4),"dd/MM/yyyy HH:mm:ss"));
+				dato.setFechaConsulta(UtilDate.StringToDate2(rs.getString(4),"dd/MM/yyyy HH:mm:ss"));
 				logger.debug("");
 				if (rs.getBigDecimal(5)!=null) dato.setPesoKg(rs.getBigDecimal(5));
 				if (rs.getBigDecimal(6)!=null) dato.setTallaCm(rs.getBigDecimal(6));
@@ -320,7 +322,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					if (rs.getString(187)!=null)
 						dato.setAmPmUltDiaFiebre(rs.getString(187));
 					if (rs.getString(188)!=null)
-						dato.setHoraUltDosisAntipiretico(UtilDate.StringToDate(rs.getString(188),"dd/MM/yyyy hh:mm:ss"));
+						dato.setHoraUltDosisAntipiretico(UtilDate.StringToDate2(rs.getString(188),"dd/MM/yyyy hh:mm:ss"));
 					if (rs.getString(189)!=null)
 						dato.setAmPmUltDosisAntipiretico(rs.getString(189));
 					if (rs.getDate(190)!=null)
@@ -334,7 +336,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 					if (rs.getDate(194)!=null)
 						dato.setFechaLinfocitos(rs.getDate(194));
 					if (rs.getDate(195)!=null)
-						dato.setFechaCierre(UtilDate.StringToDate(rs.getString(195),"dd-MM-yyyy HH:mm:ss"));
+						dato.setFechaCierre(UtilDate.StringToDate2(rs.getString(195),"dd-MM-yyyy HH:mm:ss"));
 						//dato.setFechaCierre(rs.getDate(195));
 					if (rs.getDate(196)!=null)
 						dato.setFechaCierreCambioTurno(rs.getDate(196));
@@ -362,6 +364,10 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 						dato.setExpedienteFisico(rs.getString(210));
 					if (rs.getString(211) !=null)
 						dato.setColegio(rs.getString(211));
+					if (rs.getString(212) !=null)
+						dato.setSupervisor(rs.getShort(212));
+					if (rs.getString(213) != null)
+						dato.setRepeatKey(rs.getString(213));
 				
 				resultado.add(dato);
 			}
@@ -420,12 +426,12 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 		List<HojaInfluenza> resultado = new ArrayList<HojaInfluenza>();
 		ResultSet rs = null;
 		try {
-			String query = "select sec_hoja_influenza, cod_expediente, num_hoja_seguimiento, fif, "
-					+ " fis, to_char(fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "
-					+ " repeat_key "
-					+ " from hoja_influenza "
-					+ " where cerrado = ? "
-					+ " and (estado_carga = ? or estado_carga is null) order by sec_hoja_influenza ";
+			String query = "select h.sec_hoja_influenza, h.cod_expediente, h.num_hoja_seguimiento, h.fif, "
+					+ " h.fis, to_char(h.fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(h.fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "
+					+ " h.repeat_key, (select uv.codigopersonal from usuarios_view uv where CAST(h.supervisor AS INTEGER) = uv.id) as supervisor "
+					+ " from hoja_influenza h "
+					+ " where h.cerrado = ? "
+					+ " and (h.estado_carga = ? or h.estado_carga is null) order by h.sec_hoja_influenza ";
 			
 			pstm = conn.prepareStatement(query);
 			pstm.setString(1, "S"); //hoja_influenza.cerrado = "S"
@@ -439,9 +445,10 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				hojaInfluenza.setNumHojaSeguimiento(rs.getInt(3));
 				hojaInfluenza.setFif(rs.getString(4));
 				hojaInfluenza.setFis(rs.getString(5));
-				hojaInfluenza.setFechaInicio(UtilDate.StringToDate(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
-				hojaInfluenza.setFechaCierre(UtilDate.StringToDate(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
+				hojaInfluenza.setFechaInicio(UtilDate.StringToDate2(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
+				hojaInfluenza.setFechaCierre(UtilDate.StringToDate2(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
 				hojaInfluenza.setRepeatKey(rs.getString(8));
+				hojaInfluenza.setSupervisor(rs.getString(9));
 				
 				resultado.add(hojaInfluenza);
 			}
@@ -500,7 +507,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				SeguimientoInfluenza seguimientoInfluenza = new SeguimientoInfluenza();
 				seguimientoInfluenza.setSecSegInfluenza(rs.getInt(1));
 				seguimientoInfluenza.setSecHojaInfluenza(rs.getInt(2));
-				seguimientoInfluenza.setFechaSeguimiento(UtilDate.StringToDate(rs.getString(3),"dd-MM-yyyy"));
+				seguimientoInfluenza.setFechaSeguimiento(UtilDate.StringToDate2(rs.getString(3),"dd-MM-yyyy"));
 				seguimientoInfluenza.setUsuarioMedico(rs.getShort(4));
 				seguimientoInfluenza.setConsultaInicial(rs.getString(5));
 				seguimientoInfluenza.setFiebre(rs.getString(6));
@@ -580,14 +587,14 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 		List<HojaZika> resultado = new ArrayList<HojaZika>();
 		ResultSet rs = null;
 		try {
-			String query = "select sec_hoja_zika, cod_expediente, num_hoja_seguimiento, fif, fis, " //5
-					+ " to_char(fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "//7
-					+ " categoria, sintoma_inicial1, " 
-					+ " sintoma_inicial2, sintoma_inicial3, sintoma_inicial4, "
-					+ " repeat_key "
-					+ " from hoja_zika"
-					+ " where cerrado = ? "
-					+ " and (estado_carga = ? or estado_carga is null) order by sec_hoja_zika ";
+			String query = "select h.sec_hoja_zika, h.cod_expediente, h.num_hoja_seguimiento, h.fif, h.fis, " //5
+					+ " to_char(h.fecha_inicio, 'dd-MM-yyyy HH24:MI:SS'), to_char(h.fecha_cierre, 'dd-MM-yyyy HH24:MI:SS'), "//7
+					+ " h.categoria, h.sintoma_inicial1, " 
+					+ " h.sintoma_inicial2, h.sintoma_inicial3, h.sintoma_inicial4, "
+					+ " h.repeat_key, (select uv.codigopersonal from usuarios_view uv where CAST(h.supervisor AS INTEGER) = uv.id) as supervisor "
+					+ " from hoja_zika h"
+					+ " where h.cerrado = ? "
+					+ " and (h.estado_carga = ? or h.estado_carga is null) order by h.sec_hoja_zika ";
 			
 			pstm = conn.prepareStatement(query);
 			pstm.setString(1, "S"); //hoja_zika.cerrado = "S"
@@ -601,14 +608,15 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				hojaZika.setNumHojaSeguimiento(rs.getInt(3));
 				hojaZika.setFif(rs.getString(4));
 				hojaZika.setFis(rs.getString(5));
-				hojaZika.setFechaInicio(UtilDate.StringToDate(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
-				hojaZika.setFechaCierre(UtilDate.StringToDate(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
+				hojaZika.setFechaInicio(UtilDate.StringToDate2(rs.getString(6),"dd-MM-yyyy HH:mm:ss"));
+				hojaZika.setFechaCierre(UtilDate.StringToDate2(rs.getString(7),"dd-MM-yyyy HH:mm:ss"));
 				hojaZika.setCategoria(rs.getString(8));
 				hojaZika.setSintomaInicial1(rs.getString(9));
 				hojaZika.setSintomaInicial2(rs.getString(10));
 				hojaZika.setSintomaInicial3(rs.getString(11));
 				hojaZika.setSintomaInicial4(rs.getString(12));
 				hojaZika.setRepeatKey(rs.getString(13));
+				hojaZika.setSupervisor(rs.getString(14));
 				
 				resultado.add(hojaZika);
 			}
@@ -667,7 +675,7 @@ public class HojaConsultaDA extends ConnectionDAO implements HojaConsultaService
 				seguimientoZika.setSecSegZika(rs.getInt(1));//sec_seg_zika
 				seguimientoZika.setSecHojaZika(rs.getInt(2));//sec_hoja_zika
 				seguimientoZika.setControlDia(rs.getInt(3));//control_dia
-				seguimientoZika.setFechaSeguimiento(UtilDate.StringToDate(rs.getString(4),"dd-MM-yyyy"));//fecha_seguimiento
+				seguimientoZika.setFechaSeguimiento(UtilDate.StringToDate2(rs.getString(4),"dd-MM-yyyy"));//fecha_seguimiento
 				seguimientoZika.setUsuarioMedico(rs.getShort(5));//usuario_medico
 				seguimientoZika.setSupervisor(rs.getShort(6));//supervisor
 				seguimientoZika.setConsultaInicial(rs.getString(7));//consulta_inicial
